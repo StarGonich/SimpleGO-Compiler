@@ -19,15 +19,10 @@ def expect(msg):
 
 
 def ctx_error(msg):
-    _error(msg, text.lex_pos)
+    _error('Контекстная ошибка: ' + msg, text.lex_pos)
 
 
 def error(msg):
     print()
     print(msg)
     exit(2)
-
-
-def warning(msg):
-    print()
-    print(msg)

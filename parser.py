@@ -1,12 +1,13 @@
+from enum import Enum
+
 import error
 import gen
 import govm
 import items
 import lexer
-import text
-from lexer import next_lex, semi, Lex
 import table
-from enum import Enum
+from text import next_ch
+from lexer import next_lex, semi, Lex
 
 
 class Types(Enum):
@@ -26,7 +27,7 @@ def check(lex):
 
 
 def golang_compile():
-    text.next_ch()
+    next_ch()
     next_lex()
     table.open_scope()
     table.new(items.Proc('fmt.Scan'))
@@ -51,8 +52,10 @@ def golang_compile():
 # SourceFile = PackageClause ";" { ImportDecl ";" } FunctionDecl ";" .
 def source_file():
     package_clause()
+    semi()
     while lexer.lex == Lex.IMPORT:
         import_decl()
+        semi()
     function_decl()
     gen.cmd(govm.STOP)
 
@@ -66,7 +69,6 @@ def package_clause():
         error.ctx_error('имя пакета должно быть "main"')
     table.new(items.Package('main'))
     next_lex()
-    semi()
 
 
 # ImportDecl = "import" ( string_lit | "(" { string_lit ";" } ")" ) .
@@ -99,6 +101,7 @@ def function_decl():
     skip(Lex.LPAR)
     skip(Lex.RPAR)
     block()
+    semi()
 
 
 # Block = "{" StatementList "}" .

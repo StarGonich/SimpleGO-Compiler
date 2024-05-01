@@ -6,8 +6,8 @@ import error
 class Lex(Enum):
     NONE, IDENTIFIER, NUM, STRING, EOT, \
         CONST, ELSE, FOR, FUNC, IF, IMPORT, PACKAGE, VAR, \
-        PLUS, MINUS, MUL, DIV, MOD, AMPER, EQ, EQEQ, NE, LT, LE, GT, GE, \
-        LPAR, RPAR, BEGIN, END, COMMA, DOT = range(32)
+        PLUS, MINUS, MUL, DIV, MOD, INC, DEC, AMPER, EQ, EQEQ, NE, LT, LE, GT, GE, \
+        LPAR, RPAR, BEGIN, END, COMMA, DOT = range(34)
 
 
 lex = Lex.NONE
@@ -149,10 +149,18 @@ def next_lex():
         # Операторы
         case '+':
             text.next_ch()
-            lex = Lex.PLUS
+            if text.ch == '+':
+                text.next_ch()
+                lex = Lex.INC
+            else:
+                lex = Lex.PLUS
         case '-':
             text.next_ch()
-            lex = Lex.MINUS
+            if text.ch == '-':
+                text.next_ch()
+                lex = Lex.DEC
+            else:
+                lex = Lex.MINUS
         case '*':
             text.next_ch()
             lex = Lex.MUL

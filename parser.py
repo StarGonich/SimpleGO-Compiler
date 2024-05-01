@@ -119,14 +119,20 @@ def statement_list():
         semi()
 
 
-# Statement = Declaration | Assignment | Procedure | IfStmt | ForStmt .
+# Statement = Declaration | Assignment | Procedure | IncDecStmt | IfStmt | ForStmt .
 def statement():
     if lexer.lex in {Lex.CONST, Lex.VAR}:
         declaration()
     elif lexer.lex == Lex.IDENTIFIER:
         x = table.find(lexer.name)
         if isinstance(x, items.Var):
-            assignment(x)
+            next_lex()
+            if lexer.lex in {Lex.INC, Lex.DEC}:
+                int_dec_stmt(x)
+            elif lexer.lex == Lex.EQ:
+                assignment(x)
+            else:
+                error.expect('имя "++", "--" или "="')
         elif isinstance(x, items.Package):
             procedure(x)
         else:
@@ -231,7 +237,6 @@ def var_spec():
 def assignment(x):
     gen.address(x)
     next_lex()
-    skip(Lex.EQ)
     if x.typ != expression():
         error.ctx_error('Несоответствие типов при присваивании')
     gen.cmd(govm.SAVE)
@@ -276,6 +281,20 @@ def arguments(x):
     else:
         assert False
     skip(Lex.RPAR)
+
+
+# IncDecStmt = identifier ( "++" | "--" ) .
+def int_dec_stmt(x):
+    gen.address(x)
+    gen.cmd(govm.DUP)
+    gen.cmd(govm.LOAD)
+    gen.const(1)
+    if lexer.lex == Lex.INC:
+        gen.cmd(govm.ADD)
+    else:
+        gen.cmd(govm.SUB)
+    gen.cmd(govm.SAVE)
+    next_lex()
 
 
 # IfStmt = "if" Expression Block [ "else" ( IfStmt | Block ) ] .

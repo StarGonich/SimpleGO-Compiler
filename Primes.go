@@ -15,12 +15,12 @@ func main() {
     for i <= n {
         d = 2
         for i % d != 0 {
-            d = d + 1
+            d++
         }
         if d == i { /* i - простое */
-            c = c + 1
+            c++
             fmt.Println(i)
         }
-        i = i + 1
+        i++
 	}
 }

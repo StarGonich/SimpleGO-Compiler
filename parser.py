@@ -37,6 +37,10 @@ def golang_compile():
 
     table.open_scope()
     source_file()
+    packages = table.get_packages()
+    for pack in packages:
+        if not pack.usage:
+            error.error('Пакет ' + pack.name + ' импортирован, но не используется')
     variables = table.get_vars()
     for v in variables:
         if v.last_use > 0:
@@ -97,6 +101,8 @@ def function_decl():
     check(Lex.IDENTIFIER)
     if lexer.name != 'main':
         error.ctx_error('в пакете main должна быть функция main')
+    x = table.find(lexer.name)
+    x.usage = True
     next_lex()
     skip(Lex.LPAR)
     skip(Lex.RPAR)
@@ -248,6 +254,7 @@ def procedure(x):
     check(Lex.DOT)
     if not isinstance(x, items.Package):
         error.ctx_error('пакет не обнаружен')
+    x.usage = True
     next_lex()
     check(Lex.IDENTIFIER)
     key = x.name + '.' + lexer.name
@@ -412,6 +419,7 @@ def factor():
             gen.cmd(govm.LOAD)
             next_lex()
         elif isinstance(x, items.Package):
+            x.usage = True
             next_lex()
             skip(Lex.DOT)
             key = x.name + '.' + lexer.name

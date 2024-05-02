@@ -1,8 +1,9 @@
 # Элементы таблицы имен
 
 class Package:
-    def __init__(self, name: str):
+    def __init__(self, name):
         self.name = name
+        self.usage = False
 
 
 class Const:

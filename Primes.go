@@ -1,8 +1,7 @@
 package main
-import (
-    "fmt"
-    "math"
-)
+
+import "fmt"
+
 func main() {
     const w = 6
     var (
@@ -18,8 +17,7 @@ func main() {
             d++
         }
         if d == i { /* i - простое */
-            c++
-            fmt.Println(i)
+            c++; fmt.Println(i)
         }
         i++
 	}

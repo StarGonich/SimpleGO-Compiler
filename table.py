@@ -36,3 +36,12 @@ def get_vars():
         if isinstance(item, items.Var):
             variables.append(item)
     return variables
+
+
+def get_packages():
+    packages = []
+    last_block = table[-1]
+    for item in last_block.values():
+        if isinstance(item, items.Package):
+            packages.append(item)
+    return packages

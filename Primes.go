@@ -9,7 +9,9 @@ func main() {
         c int
 	)
     fmt.Scan(&n)
-    c = 0
+    c
+    =
+    0
     i = 2
     for i <= n {
         d = 2
@@ -17,7 +19,7 @@ func main() {
             d++
         }
         if d == i { /* i - простое */
-            c++; fmt.Println(i)
+            c++; println(i)
         }
         i++
 	}

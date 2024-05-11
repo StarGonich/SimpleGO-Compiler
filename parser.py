@@ -31,8 +31,13 @@ def golang_compile():
     next_lex()
     table.open_scope()
     table.new(items.Proc('fmt.Scan'))
+    table.new(items.Proc('fmt.Print'))
     table.new(items.Proc('fmt.Println'))
-    table.new(items.Func('math.Abs', Types.Int))
+    table.new(items.Proc('print'))
+    table.new(items.Proc('println'))
+    table.new(items.Proc('panic'))
+    table.new(items.Func('min', Types.Int))
+    table.new(items.Func('max', Types.Int))
     table.new(items.Type('int', Types.Int))
 
     table.open_scope()
@@ -139,10 +144,10 @@ def statement():
                 assignment(x)
             else:
                 error.expect('имя "++", "--" или "="')
-        elif isinstance(x, items.Package):
+        elif isinstance(x, items.Package | items.Proc):
             procedure(x)
         else:
-            error.expect('имя переменной или пакета, с последующей функцией')
+            error.expect('имя переменной, функции или пакета')
     elif lexer.lex == Lex.IF:
         if_stmt()
     elif lexer.lex == Lex.FOR:
@@ -248,20 +253,20 @@ def assignment(x):
     gen.cmd(govm.SAVE)
 
 
-# Procedure = identifier "." identifier Arguments
+# Procedure = identifier [ "." identifier ] Arguments
 def procedure(x):
     next_lex()  # Пропустили identifier .
-    check(Lex.DOT)
-    if not isinstance(x, items.Package):
-        error.ctx_error('пакет не обнаружен')
-    x.usage = True
-    next_lex()
-    check(Lex.IDENTIFIER)
-    key = x.name + '.' + lexer.name
-    x = table.find(key)
+    if lexer.lex == Lex.DOT:
+        if not isinstance(x, items.Package):
+            error.ctx_error('пакет не обнаружен')
+        x.usage = True
+        next_lex()
+        check(Lex.IDENTIFIER)
+        key = x.name + '.' + lexer.name
+        x = table.find(key)
+        next_lex()
     if not isinstance(x, items.Proc):
         error.ctx_error('процедура не обнаружена')
-    next_lex()
     arguments(x)
 
 
@@ -278,15 +283,47 @@ def arguments(x):
         gen.cmd(govm.IN)
         gen.cmd(govm.SAVE)
         next_lex()
-    elif x.name == 'fmt.Println':
-        return_type = expression()
-        if return_type != Types.Int:
-            error.ctx_error('В fmt.Println разрешён только вывод выражений целого типа')
-        gen.cmd(0)
-        gen.cmd(govm.OUT)
+    elif x.name in {'print', 'fmt.Print'}:
+        if lexer.lex != Lex.RPAR:
+            return_type = expression()
+            if return_type != Types.Int:
+                error.ctx_error('В fmt.Print разрешён только вывод выражений целого типа')
+            gen.cmd(0)
+            gen.cmd(govm.OUT)
+    elif x.name in {'println', 'fmt.Println'}:
+        if lexer.lex != Lex.RPAR:
+            return_type = expression()
+            if return_type != Types.Int:
+                error.ctx_error('В fmt.Println разрешён только вывод выражений целого типа')
+            gen.cmd(0)
+            gen.cmd(govm.OUT)
         gen.cmd(govm.LN)
-    else:
-        assert False
+    elif x.name == 'panic':
+        value = const_expr()
+        gen.const(value)
+        gen.cmd(govm.STOP)
+    elif x.name == 'max':
+        simple_expr()
+        while lexer.lex == Lex.COMMA:
+            next_lex()
+            simple_expr()
+            gen.cmd(govm.OVER)
+            gen.cmd(govm.OVER)
+            gen.cmd(gen.PC + 3)
+            gen.cmd(govm.IFGT)
+            gen.cmd(govm.SWAP)
+            gen.cmd(govm.DROP)
+    elif x.name == 'min':
+        simple_expr()
+        while lexer.lex == Lex.COMMA:
+            next_lex()
+            simple_expr()
+            gen.cmd(govm.OVER)
+            gen.cmd(govm.OVER)
+            gen.cmd(gen.PC + 3)
+            gen.cmd(govm.IFLT)
+            gen.cmd(govm.SWAP)
+            gen.cmd(govm.DROP)
     skip(Lex.RPAR)
 
 
@@ -407,7 +444,7 @@ def term():
             gen.cmd(govm.MOD)
 
 
-# Factor = identifier [. identifier "(" Expression ")"] | number | "(" SimpleExpr ")".
+# Factor = identifier ["(" Expression ")"] | number | "(" SimpleExpr ")".
 def factor():
     if lexer.lex == Lex.IDENTIFIER:
         x = table.find(lexer.name)
@@ -418,23 +455,9 @@ def factor():
             gen.address(x)
             gen.cmd(govm.LOAD)
             next_lex()
-        elif isinstance(x, items.Package):
-            x.usage = True
+        elif isinstance(x, items.Func):  #min, max
             next_lex()
-            skip(Lex.DOT)
-            key = x.name + '.' + lexer.name
-            x = table.find(key)
-            if not isinstance(x, items.Func):
-                error.ctx_error('функция не обнаружена')
-            next_lex()
-            skip(Lex.LPAR)  # math.Abs
-            simple_expr()
-            gen.cmd(govm.DUP)  # x, x
-            gen.cmd(0)  # x, x, 0
-            gen.cmd(gen.PC + 3)  # x, x, 0, A
-            gen.cmd(govm.IFGE)
-            gen.cmd(govm.NEG)
-            skip(Lex.RPAR)
+            arguments(x)
     elif lexer.lex == Lex.NUM:
         gen.cmd(lexer.num)
         next_lex()

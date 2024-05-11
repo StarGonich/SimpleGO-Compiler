@@ -273,6 +273,8 @@ def procedure(x):
 # Arguments = "(" [ "&" ] identifier ")"
 def arguments(x):
     skip(Lex.LPAR)
+
+    # Procedures
     if x.name == 'fmt.Scan':
         skip(Lex.AMPER)
         check(Lex.IDENTIFIER)
@@ -302,26 +304,21 @@ def arguments(x):
         value = const_expr()
         gen.const(value)
         gen.cmd(govm.STOP)
-    elif x.name == 'max':
+
+    # Functions (max, min)
+    else:
         simple_expr()
+        if x.name == 'max':
+            relation = govm.IFGT
+        else:
+            relation = govm.IFLT
         while lexer.lex == Lex.COMMA:
             next_lex()
             simple_expr()
             gen.cmd(govm.OVER)
             gen.cmd(govm.OVER)
             gen.cmd(gen.PC + 3)
-            gen.cmd(govm.IFGT)
-            gen.cmd(govm.SWAP)
-            gen.cmd(govm.DROP)
-    elif x.name == 'min':
-        simple_expr()
-        while lexer.lex == Lex.COMMA:
-            next_lex()
-            simple_expr()
-            gen.cmd(govm.OVER)
-            gen.cmd(govm.OVER)
-            gen.cmd(gen.PC + 3)
-            gen.cmd(govm.IFLT)
+            gen.cmd(relation)
             gen.cmd(govm.SWAP)
             gen.cmd(govm.DROP)
     skip(Lex.RPAR)
